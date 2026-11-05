@@ -89,7 +89,7 @@ def apply_move(state: CubeState, move: str) -> CubeState:
     suffix = move[1:]
 
     if suffix not in ["", "'", "2"]:
-        return ValueError(f'Invalid move.')
+        raise ValueError(f'Invalid move.')
 
     # A normal move = one quarter-turn.
     # An inverse move = three clockwise quarter-turns.
