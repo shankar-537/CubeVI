@@ -1,57 +1,132 @@
-import { useState } from "react";
+import { useRef, useState } from 'react';
+import CubeScene from './cube/CubeScene';
+import Palette from './components/Palette';
+import SolutionBar from './components/SolutionBar';
+import { COLORS, SPEEDS } from './constants';
+import { solveCube } from './api';
+import './App.css';
 
-import { solveCube } from "./api";
-import Cube3D from "./components/Cube3D";
-import CubeInput from "./components/CubeInput";
-import SolutionDisplay from "./components/SolutionDisplay";
+const emptyColors = () => Array(24).fill(null);
 
-// TODO: use this as the initial solved form state, then add a reset button.
-const SOLVED_FACES = {
-  U: ["W", "W", "W", "W"], R: ["R", "R", "R", "R"],
-  F: ["G", "G", "G", "G"], D: ["Y", "Y", "Y", "Y"],
-  L: ["O", "O", "O", "O"], B: ["B", "B", "B", "B"],
-};
+// Returns an error text, or '' when the painted cube is OK to send.
+function validate(colors) {
+  const empty = colors.filter((c) => !c).length;
+  if (empty) return `Paint all 24 stickers first (${empty} left).`;
 
-export default function App() {
-  // State is the bridge between child input components and the API request.
-  const [faces, setFaces] = useState(SOLVED_FACES);
-  const [constraint, setConstraint] = useState("");
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState("");
-
-  async function handleSubmit(event) {
-    event.preventDefault();
-    // TODO: add loading state, call solveCube({ faces, constraint }), and show errors.
-    setError("The solve workflow is a learning TODO; connect it to api.js.");
+  for (const letter of Object.keys(COLORS)) {
+    const n = colors.filter((c) => c === letter).length;
+    if (n !== 4) {
+      return `Each color must be used exactly 4 times (${COLORS[letter].name} is used ${n}).`;
+    }
   }
-
-  return (
-    <main>
-      <header>
-        <p className="eyebrow">CS217C · Artificial Intelligence</p>
-        <h1>CubeVI</h1>
-        <p>Enter a 2×2×2 cube state and watch the search discover a solution.</p>
-      </header>
-      <div className="layout">
-        <form className="panel" onSubmit={handleSubmit}>
-          <h2>Cube state</h2>
-          <CubeInput value={faces} onChange={setFaces} />
-          <label htmlFor="constraint">Optional constraint</label>
-          <select id="constraint" value={constraint} onChange={(event) => setConstraint(event.target.value)}>
-            <option value="">No constraint</option>
-            <option value="solve it under 7 moves">Solve it under 7 moves</option>
-            <option value="find the shortest solution">Find the shortest solution</option>
-          </select>
-          <button type="submit">Solve cube</button>
-          {error && <p className="error">{error}</p>}
-        </form>
-        <section className="panel">
-          <h2>Live model</h2>
-          <Cube3D />
-          <SolutionDisplay result={result} />
-        </section>
-      </div>
-    </main>
-  );
+  return '';
 }
 
+export default function App() {
+  const [colors, setColors] = useState(emptyColors);
+  const [selected, setSelected] = useState('R');
+  const [moves, setMoves] = useState([]);
+  const [activeMove, setActiveMove] = useState(-1);
+  const [status, setStatus] = useState('idle'); // idle | solving | playing | done
+  const [message, setMessage] = useState('');
+  const [speed, setSpeed] = useState(1);
+
+  const cubeRef = useRef(null);
+  const speedRef = useRef(1); // lets the speed change while a solution is playing
+
+  const clearSolution = () => {
+    setMoves([]);
+    setActiveMove(-1);
+    setStatus('idle');
+  };
+
+  const handlePaint = (index) => {
+    setColors((prev) => {
+      const next = [...prev];
+      next[index] = selected;
+      return next;
+    });
+    setMessage('');
+  };
+
+  const handleSpeed = () => {
+    const next = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length];
+    setSpeed(next);
+    speedRef.current = next;
+  };
+
+  const handleReset = () => {
+    cubeRef.current.resetPose();
+    setColors(emptyColors());
+    clearSolution();
+    setMessage('');
+  };
+
+  const handleSolve = async () => {
+    const error = validate(colors);
+    if (error) {
+      setMessage(error);
+      return;
+    }
+
+    setMessage('');
+    cubeRef.current.resetPose(); // start from the painted cube (also for a 2nd solve)
+    setMoves([]);
+    setActiveMove(-1);
+    setStatus('solving');
+
+    try {
+      const list = await solveCube(colors);
+      if (list.length === 0) {
+        setMessage('The cube is already solved.');
+        setStatus('idle');
+        return;
+      }
+      setMoves(list);
+      setStatus('playing');
+      await cubeRef.current.playMoves(list, {
+        getSpeed: () => speedRef.current,
+        onMoveStart: setActiveMove,
+      });
+      setStatus('done');
+    } catch (err) {
+      setMessage(err.message || 'Something went wrong.');
+      clearSolution();
+    }
+  };
+
+  return (
+    <div className="app">
+      <header className="header">Cube Solver</header>
+
+      <div className="body">
+        <Palette colors={colors} selected={selected} onSelect={setSelected} />
+
+        <main className="main">
+          <div className="stage">
+            <div className="canvas-wrap">
+              <CubeScene
+                ref={cubeRef}
+                colors={colors}
+                onPaint={handlePaint}
+                onCubeReset={clearSolution}
+              />
+            </div>
+            <div className="stage-hint">Drag to rotate · click a sticker to paint it</div>
+          </div>
+
+          <SolutionBar
+            moves={moves}
+            activeMove={activeMove}
+            status={status}
+            message={message}
+            speed={speed}
+            onSpeed={handleSpeed}
+            onReset={handleReset}
+            onSolve={handleSolve}
+          />
+        </main>
+      </div>
+    </div>
+  );
+}
