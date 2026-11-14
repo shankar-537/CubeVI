@@ -40,7 +40,3 @@ def generate_scramble(length: int=20):
         previous_face = move[0]
 
     return state, scramble_moves
-
-
-
-

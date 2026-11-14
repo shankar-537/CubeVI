@@ -20,12 +20,11 @@ def validate_cube(faces: dict[str, list[str]]):
      'B': ['B','B','B','B']
      }
     """
-
+    if not isinstance(faces, dict):
+            return False, ("Faces must be provided as a dictionary.")
     if set(faces.keys())!=valid_faces:
         return False, "Faces must contain exactly U,R, F, D, L, B."
 
-    if not isinstance(faces, dict):
-        return False, ("Faces must be provided as a dictionary.")
 
     all_stickers=[]
 
