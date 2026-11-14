@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 
+from app.cube.moves import apply_move
 from app.cube.state import CubeState
 
 
