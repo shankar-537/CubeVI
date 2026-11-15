@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException
 from app.schemas import ScrambleResponse, SolveRequest, SolveResponse
 from app.cube.serialization import state_from_faces
 from app.solver.search import Algorithms
-
+from app.solver.solver import solve
 router = APIRouter()
 
 
@@ -37,59 +37,40 @@ def scramble(length: int = 6) -> ScrambleResponse:
 def solve_cube(request: SolveRequest) -> SolveResponse:
     """
     Receive face colours, convert them into CubeState,
-    run IDA*, and return the solution.
+    run IDA* via the solver facade, and return the solution.
     """
-
-    # Constraint parsing is not implemented yet.
     if request.constraint.strip():
         raise HTTPException(
             status_code=501,
             detail="Move constraints are not supported yet."
         )
 
-    # Step 1: Convert sticker colours into CubeState.
     try:
         cube = state_from_faces(request.faces)
-
     except (ValueError, TypeError) as error:
-        raise HTTPException(
-            status_code=400,
-            detail=str(error)
-        )
+        raise HTTPException(status_code=400, detail=str(error))
 
-    # Step 2: Check that the cube is valid.
     if not cube.is_valid():
         raise HTTPException(
             status_code=400,
             detail="Invalid cube configuration."
         )
 
-    # Step 3: Run the existing IDA* algorithm.
     try:
-        solver = get_solver()
-        solution = solver.IDA_star(cube)
-
+        result = solve(cube)
     except ValueError as error:
-        raise HTTPException(
-            status_code=400,
-            detail=str(error)
-        )
+        raise HTTPException(status_code=400, detail=str(error))
 
-    # Step 4: Check whether a solution was found.
-    if solution is None:
+    if result is None:
         raise HTTPException(
             status_code=422,
             detail="No solution found within the maximum search depth."
         )
 
-    # Step 5: Return the solution.
     return SolveResponse(
         valid=True,
-        moves=solution,
-        depth=len(solution),
-        explanation=(
-            "Cube solved successfully using IDA* "
-            "with Pattern Database heuristics."
-        ),
+        moves=result.moves,
+        depth=len(result.moves),
+        explanation=result.explanation,
         parsed_constraint={}
     )
