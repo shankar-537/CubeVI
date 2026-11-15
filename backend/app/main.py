@@ -8,7 +8,9 @@ root/health endpoints.
 
 from contextlib import asynccontextmanager
 import logging
+import os
 import sys
+import time
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -35,8 +37,10 @@ async def lifespan(app: FastAPI):
     """
     logger.info("Initializing CubeVI backend...")
     logger.info("Pre-warming solver heuristics (Pattern Databases)...")
+    start_t = time.perf_counter()
     get_algorithms()
-    logger.info("Solver heuristics ready. CubeVI backend startup complete.")
+    elapsed_ms = (time.perf_counter() - start_t) * 1000
+    logger.info(f"Solver heuristics ready in {elapsed_ms:.1f}ms. CubeVI backend startup complete.")
     yield
     logger.info("CubeVI backend shutting down...")
 
@@ -51,16 +55,24 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS configuration: allows React / Vite frontend development and preview origins
+# Dynamic CORS configuration
+# Reads allowed origins from CORS_ORIGINS env variable (comma-separated), e.g.:
+# CORS_ORIGINS="https://cubevi.vercel.app,http://localhost:5173"
+default_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+env_origins = os.getenv("CORS_ORIGINS", "")
+allowed_origins = [o.strip() for o in env_origins.split(",") if o.strip()] if env_origins else default_origins
+allow_all = "*" in allowed_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
-    allow_credentials=True,
+    allow_origins=["*"] if allow_all else allowed_origins,
+    allow_origin_regex=os.getenv("CORS_ORIGIN_REGEX", r"https://.*\.vercel\.app"),
+    allow_credentials=True if not allow_all else False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
