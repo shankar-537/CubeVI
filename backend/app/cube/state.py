@@ -76,11 +76,21 @@ class CubeState:
             return False
 
         return True
-    
+    @classmethod
+    def solved(cls):
+        """Return the canonical solved cube state."""
+        return cls()
+
+    def __eq__(self, other):
+        if not isinstance(other, CubeState):
+            return False
+        return self.cp == other.cp and self.co == other.co
+
+    def __hash__(self):
+        return hash((tuple(self.cp), tuple(self.co)))
+
     def copy(self):
         return CubeState(self.cp, self.co)
 
     def __repr__(self):
         return f"CubeState(cp={self.cp}, co={self.co})"
-
-    
