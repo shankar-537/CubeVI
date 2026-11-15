@@ -6,7 +6,8 @@ from functools import lru_cache
 from fastapi import APIRouter, HTTPException
 
 from app.schemas import HealthResponse, ScrambleResponse, SolveRequest, SolveResponse
-from app.cube.serialization import state_from_faces
+from app.cube.scramble import generate_scramble
+from app.cube.serialization import faces_from_state, state_from_faces
 from app.solver.search import Algorithms
 from app.solver.solver import solve
 router = APIRouter()
@@ -26,10 +27,18 @@ def health() -> HealthResponse:
 
 @router.get("/scramble", response_model=ScrambleResponse)
 def scramble(length: int = 6) -> ScrambleResponse:
-    # We'll implement this after the solve endpoint.
-    raise HTTPException(
-        status_code=501,
-        detail="Scramble route is not implemented yet."
+    try:
+        state, moves = generate_scramble(length=length)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        )
+
+    faces = faces_from_state(state)
+    return ScrambleResponse(
+        scramble=moves,
+        faces=faces,
     )
 
 
