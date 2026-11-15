@@ -5,7 +5,7 @@ from functools import lru_cache
 
 from fastapi import APIRouter, HTTPException
 
-from app.schemas import ScrambleResponse, SolveRequest, SolveResponse
+from app.schemas import HealthResponse, ScrambleResponse, SolveRequest, SolveResponse
 from app.cube.serialization import state_from_faces
 from app.solver.search import Algorithms
 from app.solver.solver import solve
@@ -19,9 +19,9 @@ def get_solver():
     return Algorithms()
 
 
-@router.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+@router.get("/health", response_model=HealthResponse)
+def health() -> HealthResponse:
+    return HealthResponse(status="ok")
 
 
 @router.get("/scramble", response_model=ScrambleResponse)
