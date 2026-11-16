@@ -17,7 +17,9 @@ export default function Palette({ colors, selected, onSelect }) {
             className={'swatch' + (selected === letter ? ' selected' : '')}
             style={{ background: c.hex, color: c.text }}
             onClick={() => onSelect(letter)}
+            disabled={used >= 4}
           >
+
             <span>{c.name}</span>
             <small>{used} / 4</small>
           </button>

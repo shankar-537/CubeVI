@@ -44,10 +44,21 @@ export default function App() {
 
   const handlePaint = (index) => {
     setColors((prev) => {
+      // No change if the sticker already has this color
+      if (prev[index] === selected) return prev;
+
+      // Check how many stickers already use this color
+      const used = prev.filter((c) => c === selected).length;
+
+      // Do not allow more than 4 stickers of one color
+      if (used >= 4) return prev;
+
       const next = [...prev];
       next[index] = selected;
+
       return next;
     });
+
     setMessage('');
   };
 
