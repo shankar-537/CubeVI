@@ -31,3 +31,25 @@ export function parseMove(text) {
 
   return { axis: base.axis, layer: base.layer, angle, double };
 }
+
+
+export function reverseMove(text) {
+  const match = /^([URFDLB])([2'’]?)$/.exec(String(text).trim());
+
+  if (!match) {
+    throw new Error(`Unknown move "${text}"`);
+  }
+
+  const [, face, suffix] = match;
+
+  if (suffix === '2') {
+    return `${face}2`;
+  }
+
+  if (suffix === "'" || suffix === '’') {
+    return face;
+  }
+
+  return `${face}'`;
+}
+
