@@ -6,7 +6,7 @@ from app.solver.heuristics import CornerPatternDatabase
 # BFS solution :
 class Algorithms:
 
-    def __init__(self):
+    def __init__(self, pdb_path=None):
         # All 18 standard moves
         self.moves = [
             "U", "U'", "U2",
@@ -18,11 +18,11 @@ class Algorithms:
         ]
 
         self.pdb1 = CornerPatternDatabase(
-            pattern_pieces=(0, 1, 2, 3)
+            pattern_pieces=(0, 1, 2, 3), db_path=pdb_path
         )
 
         self.pdb2 = CornerPatternDatabase(
-            pattern_pieces=(4, 5, 6, 7)
+            pattern_pieces=(4, 5, 6, 7), db_path=pdb_path
         )
 
 

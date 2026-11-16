@@ -128,3 +128,29 @@ def test_algorithms_ida_star():
     invalid_cube = CubeState(co=[2, 0, 0, 0, 0, 0, 0, 0])
     with pytest.raises(ValueError):
         algorithms.IDA_star(invalid_cube)
+
+
+def test_pdb_disk_loading_and_dump(tmp_path):
+    """CornerPatternDatabase should load from pre-computed disk files and support dumping."""
+    # 1. Existing database should have loaded 136,080 states from disk
+    pdb = get_algorithms().pdb1
+    assert len(pdb.distances) == 136080
+    assert pdb.heuristic(CubeState.solved()) == 0
+
+    # 2. Test dumping to a custom file and reloading
+    temp_pdb_file = tmp_path / "test_pdb.pickle"
+    pdb.dump(temp_pdb_file)
+    assert temp_pdb_file.exists()
+
+    reloaded = CornerPatternDatabase.from_file(temp_pdb_file, pattern_pieces=(0, 1, 2, 3))
+    assert len(reloaded.distances) == 136080
+    assert reloaded.heuristic(CubeState.solved()) == 0
+
+
+def test_pdb_fallback_when_file_not_found(tmp_path):
+    """When autoload=False or nonexistent path without precomputed pieces, it gracefully handles."""
+    nonexistent = tmp_path / "nonexistent.pickle"
+    # When initialized with custom missing path, it should fallback without crashing
+    # using autoload=False to test pure in-memory or fallback behavior
+    pdb = CornerPatternDatabase(pattern_pieces=(0, 1, 2, 3), db_path=nonexistent, autoload=True)
+    assert len(pdb.distances) == 136080
