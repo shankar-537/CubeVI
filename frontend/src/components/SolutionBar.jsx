@@ -3,11 +3,17 @@ export default function SolutionBar({
   moves,
   activeMove,
   status,
+  isPaused,
   message,
   speed,
   onSpeed,
+  onPause,
+  onResume,
+  onNext,
+  onBack,
   onReset,
   onSolve,
+  onScramble,
 }) {
   const busy = status === 'solving' || status === 'playing';
 
@@ -36,9 +42,49 @@ export default function SolutionBar({
         <button className="btn" onClick={onSpeed}>
           Speed {speed}x
         </button>
+        
+
+        <button
+          className="btn"
+          onClick={onPause}
+          disabled={status !== 'playing' || isPaused}
+        >
+          Pause
+        </button>
+
+        <button
+          className="btn"
+          onClick={onResume}
+          disabled={status !== 'playing' || !isPaused}
+        >
+          Resume
+        </button>
+
+        <button
+          className="btn"
+          onClick={onNext}
+          disabled={moves.length === 0 || activeMove >= moves.length - 1}
+        >
+          Next
+        </button>
+        <button
+          className="btn"
+          onClick={onBack}
+          disabled={activeMove < 0 || (status === 'playing' && !isPaused && activeMove === 0)}
+        >
+          Back
+        </button>
         <div className="spacer" />
-        <button className="btn" onClick={onReset} disabled={busy}>
+        <button className="btn" onClick={onReset}>
           Reset
+        </button>
+
+        <button
+          className="btn"
+          onClick={onScramble}
+          disabled={busy}
+        >
+          Scramble
         </button>
         <button className="btn" onClick={onSolve} disabled={busy}>
           Solve!

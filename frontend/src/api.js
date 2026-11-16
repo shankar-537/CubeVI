@@ -74,3 +74,20 @@ try {
 
   return data.moves;
 }
+
+
+export async function scrambleCube(length = 6) {
+  const res = await fetch(`${API_URL}/scramble?length=${length}`);
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.detail || `Scramble error (${res.status})`);
+  }
+
+  if (!Array.isArray(data.scramble) || !data.faces) {
+    throw new Error('Unexpected reply from scramble API.');
+  }
+
+  return data;
+}

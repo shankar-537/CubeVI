@@ -3,7 +3,7 @@ import CubeScene from './cube/CubeScene';
 import Palette from './components/Palette';
 import SolutionBar from './components/SolutionBar';
 import { COLORS, SPEEDS } from './constants';
-import { solveCube } from './api';
+import { solveCube, scrambleCube } from './api';
 import './App.css';
 
 const emptyColors = () => Array(24).fill(null);
@@ -28,6 +28,7 @@ export default function App() {
   const [moves, setMoves] = useState([]);
   const [activeMove, setActiveMove] = useState(-1);
   const [status, setStatus] = useState('idle'); // idle | solving | playing | done
+  const [isPaused, setIsPaused] = useState(false);
   const [message, setMessage] = useState('');
   const [speed, setSpeed] = useState(1);
 
@@ -38,6 +39,7 @@ export default function App() {
     setMoves([]);
     setActiveMove(-1);
     setStatus('idle');
+    setIsPaused(false);
   };
 
   const handlePaint = (index) => {
@@ -52,7 +54,27 @@ export default function App() {
   const handleSpeed = () => {
     const next = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length];
     setSpeed(next);
-    speedRef.current = next;
+    speedRef.current = next;  
+  };
+
+  const handlePause = () => {
+    cubeRef.current.pausePlayback();
+    setIsPaused(true);
+  };
+
+  const handleNext = () => {
+    cubeRef.current.requestNext(moves);
+    setIsPaused(true);
+  };
+
+  const handleBack = () => {
+    cubeRef.current.requestBack(moves);
+    setIsPaused(true);
+  };
+
+  const handleResume = () => {
+    cubeRef.current.resumePlayback();
+    setIsPaused(false);
   };
 
   const handleReset = () => {
@@ -60,6 +82,29 @@ export default function App() {
     setColors(emptyColors());
     clearSolution();
     setMessage('');
+  };
+
+  const handleScramble = async () => {
+    try {
+      setMessage('');
+
+      cubeRef.current.resetPose();
+
+      const data = await scrambleCube(6);
+
+      setColors(
+        ['U', 'R', 'F', 'D', 'L', 'B'].flatMap(
+          (face) => data.faces[face]
+        )
+      );
+
+      setMoves(data.scramble);
+      setActiveMove(data.scramble.length - 1);
+      setStatus('done');
+      setIsPaused(false);
+    } catch (err) {
+      setMessage(err.message || 'Could not generate scramble.');
+    }
   };
 
   const handleSolve = async () => {
@@ -74,6 +119,7 @@ export default function App() {
     setMoves([]);
     setActiveMove(-1);
     setStatus('solving');
+    setIsPaused(false);
 
     try {
       const list = await solveCube(colors);
@@ -84,11 +130,16 @@ export default function App() {
       }
       setMoves(list);
       setStatus('playing');
-      await cubeRef.current.playMoves(list, {
+      setIsPaused(false);
+
+      const completed = await cubeRef.current.playMoves(list, {
         getSpeed: () => speedRef.current,
         onMoveStart: setActiveMove,
       });
-      setStatus('done');
+
+      if (completed) {
+        setStatus('done');
+      }
     } catch (err) {
       setMessage(err.message || 'Something went wrong.');
       clearSolution();
@@ -119,11 +170,17 @@ export default function App() {
             moves={moves}
             activeMove={activeMove}
             status={status}
+            isPaused={isPaused}
             message={message}
             speed={speed}
             onSpeed={handleSpeed}
+            onPause={handlePause}
+            onResume={handleResume}
+            onNext={handleNext}
+            onBack={handleBack}
             onReset={handleReset}
             onSolve={handleSolve}
+            onScramble={handleScramble}
           />
         </main>
       </div>
