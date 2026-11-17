@@ -13,7 +13,7 @@ all_moves=[
     "B", "B'", "B2",
 ]
 
-def generate_scramble(length: int=20):
+def generate_scramble(length: int=100):
     """
     Generate a valid random 2x2x2 CubeState.
     length is the number of random moves to apply"""
